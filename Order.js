@@ -13,6 +13,12 @@ const orderSchema = new mongoose.Schema({
       image: String,
     },
   ],
+  user: {
+    
+    type: String,
+    ref: "User",
+    required: true,
+  },
 });
 
 // Create the Order model

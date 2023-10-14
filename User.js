@@ -26,6 +26,14 @@ const UserScheme = mongoose.Schema({
    otp: {
     type: Number,
   },
+  orders:{
+    
+    type: [],
+    ref: "Order",
+}
+  
+
+
  
 });
 const User = mongoose.model("user", UserScheme);

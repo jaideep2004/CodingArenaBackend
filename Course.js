@@ -31,7 +31,7 @@ const CourseSchema = mongoose.Schema({
   },
   rating : {
     type : Number, 
-    default : 5 , 
+    default : 4.9 , 
   },
   date: {
     type: Date,
