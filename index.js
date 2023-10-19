@@ -81,41 +81,6 @@ app.post("/signup", async (req, res) => {
 });
 
 //login
-// app.post("/login", async (req, res) => {
-// 	const { email, password } = req.body;
-// 	if ((email == "admin@email.com", password == "admin123")) {
-// 		const data = {
-// 			user: {
-// 				email: email,
-// 				admin: true,
-// 			},
-// 		};
-// 		var token = jwt.sign(data, "secret123");
-// 		res.json({ success: true, token: token, admin: true });
-// 	}
-// 	let success = false;
-// 	let user = await User.findOne({ email: email });
-// 	if (user) {
-// 		const passwordCompare = await bcrypt.compare(password, user.password);
-// 		if (passwordCompare) {
-// 			const data = {
-// 				user: {
-// 					id: user.id,
-// 					email: user.email,
-// 					username: user.username
-// 				},
-// 			};
-// 			console.log(data)
-// 			success = true;
-// 			var token = jwt.sign(data, "secret123");
-// 			res.json({ success: success, token: token, admin: false });
-// 		} else {
-// 			res.json({ success: success, error: "Invalid Email or Password " });
-// 		}
-// 	} else {
-// 		res.json({ success: success, error: "No user Exists with this email Id " });
-// 	}
-// });
 
 app.post("/login", async (req, res) => {
 	const { email, password } = req.body;
@@ -348,6 +313,7 @@ app.get("/cart", async (req, res) => {
 	}
 });
 
+//remove from cart
 app.delete("/cart/remove/:courseTitle", async (req, res) => {
 	const { courseTitle } = req.params;
 
@@ -365,6 +331,89 @@ app.delete("/cart/remove/:courseTitle", async (req, res) => {
 		res.status(500).json({ error: "Failed to remove course from cart" });
 	}
 });
+
+//wishlist
+
+const wishlistSchema = new mongoose.Schema({
+	title: String,
+	cname: String,
+	price: Number,
+	image: String,
+});
+
+const WishlistItem = mongoose.model("WishlistItem", wishlistSchema);
+
+//get all courses
+app.get("/allcourses", async (req, res) => {
+	try {
+		const courses = await Course.find();
+		res.json(courses);
+	} catch (error) {
+		res.status(500).json({ error: "Internal server error" });
+	}
+});
+
+//add course to cart
+app.post("/wishlist/add", async (req, res) => {
+	try {
+		const courseTitle = req.body.courseTitle;
+
+		const course = await Course.findOne({ title: courseTitle });
+
+		if (!course) {
+			return res.status(404).json({ error: "Course not found" });
+		}
+
+		const wishlistItem = new WishlistItem({
+			title: courseTitle,
+			cname: course.cname,
+			price: course.price,
+			image: course.image,
+		});
+
+		// Save the cart item to the database
+		await wishlistItem.save();
+
+		res.json({ message: "Course added to cart", wishlistItem });
+	} catch (error) {
+		console.error("Error adding course to cart:", error);
+		res.status(500).json({ error: "Failed to add course to cart" });
+	}
+});
+
+app.get("/wishlist", async (req, res) => {
+	try {
+		// Retrieve all cart items from the database
+		const wishlistItems = await WishlistItem.find({});
+		
+
+		res.json(wishlistItems);
+	} catch (error) {
+		console.error("Error retrieving cart items:", error);
+		res.status(500).json({ error: "Failed to retrieve cart items" });
+	}
+});
+
+//remove from cart
+app.delete("/wishlist/remove/:courseTitle", async (req, res) => {
+	const { courseTitle } = req.params;
+
+	try {
+		
+		const result = await WishlistItem.deleteOne({ title: courseTitle });
+
+		if (result.deletedCount === 0) {
+			return res.status(404).json({ error: "Course not found in the wishlist" });
+		}
+
+		res.json({ message: "Course removed from wishlist" });
+	} catch (error) {
+		console.error("Error removing course from wishlist:", error);
+		res.status(500).json({ error: "Failed to remove course from wishlist" });
+	}
+});
+
+
 
 //checkout
 
@@ -431,25 +480,22 @@ app.get("/orders", async (req, res) => {
 	}
 });
 
-//course upload
+//COURSE UPLOAD
 
 const storage = multer.diskStorage({
 	destination: (req, file, cb) => {
-		cb(null, "uploads");
+	  cb(null, 'uploads/'); // Define the destination folder
 	},
-	// filename: (req, file, cb) => {
-	// 	const timestamp = Date.now();
-	// 	cb(null, `${timestamp}-${file.originalname}`);
-	// },
 	filename: (req, file, cb) => {
-		cb(null, Date.now() + path.extname(file.originalname)); // Rename files to avoid conflicts
+	  const fileExt = path.extname(file.originalname); // Get the original file extension
+	  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+	  cb(null, file.fieldname + '-' + uniqueSuffix + fileExt); // Preserve the original file extension
 	},
-	// filename: (req, file, cb) => {
-	// 	cb(null, file.originalname); // Use the original filename
-	//   }
-});
+  });
+  
+  const upload = multer({ storage: storage });
+  
 
-const upload = multer({ storage });
 
 app.get("/allcourses", async (req, res) => {
 	try {
@@ -484,24 +530,63 @@ function isAdmin(req, res, next) {
 	}
 }
 
-app.post("/upload", isAdmin, upload.single("image"), async (req, res) => {
-	if (!req.file) {
-		return res.status(400).json({ message: "No file uploaded" });
-	}
-	const imagePath = req.file.path;
-	console.log(req.body);
-	console.log(req.file);
+//without video
+// const upload = multer({ storage });
+// app.post("/upload", isAdmin, upload.single("image"), async (req, res) => {
+// 	if (!req.file) {
+// 		return res.status(400).json({ message: "No file uploaded" });
+// 	}
+// 	const imagePath = req.file.path;
+// 	console.log(req.body);
+// 	console.log(req.file);
 
-	const c = await Course.create({
-		cname: req.body.cname,
-		title: req.body.title,
-		description: req.body.description,
-		price: req.body.price,
-		image: req.file.filename,
-	});
+// 	const c = await Course.create({
+// 		cname: req.body.cname,
+// 		title: req.body.title,
+// 		description: req.body.description,
+// 		price: req.body.price,
+// 		image: req.file.filename,
+// 	});
 
-	res.status(200).json({ message: "File uploaded successfully", imagePath });
+// 	res.status(200).json({ message: "File uploaded successfully", imagePath });
+// });
+
+
+//upload course with video
+app.post("/upload", isAdmin, upload.fields([
+  { name: "image", maxCount: 1 }, // For image
+  { name: "pdf", maxCount: 1 },   // For PDF
+  { name: "video", maxCount: 1 }  // For video
+]), async (req, res) => {
+  if (!req.files || !req.files.image || !req.files.pdf || !req.files.video) {
+    return res.status(400).json({ message: "Some files are missing" });
+  }
+
+  const imagePath = req.files.image[0].path;
+  const pdfPath = req.files.pdf[0].path;
+
+  const videoPath = req.files.video[0].path;
+
+
+  console.log(req.body);  // Access form data
+  console.log(req.files); // Access uploaded files
+
+  const c = await Course.create({
+    cname: req.body.cname,
+    title: req.body.title,
+    description: req.body.description,
+    price: req.body.price,
+    image: req.files.image[0].filename,
+	  pdf: req.files.pdf[0].filename,
+	 
+    video: req.files.video[0].filename,
+  });
+
+  res.status(200).json({ message: "Files uploaded successfully", imagePath, pdfPath, videoPath });
 });
+
+
+
 
 app.get("/allcourses/:title", async (req, res) => {
 	try {
@@ -540,6 +625,27 @@ app.post("/allcourses/updatecourse/:title", async (req, res) => {
 	res.status(200).json({ message: "course updated", updatedCourse });
 	console.log("Course updated")
 });
+
+app.delete("/allcourses/remove/:title", async (req, res) => {
+	const { title } = req.params;
+
+	try {
+		
+		const cresult = await Course.deleteOne({ title});
+
+		if (cresult.deletedCount === 0) {
+			return res.status(404).json({ error: "Course not found " });
+		}
+
+		res.json({ message: "Course removed from list" });
+		console.log("Course Removed")
+	} catch (error) {
+		console.error("Error removing course from list:", error);
+		res.status(500).json({ error: "Failed to remove course from list" });
+	}
+});
+
+
 
 app.listen(port, () => {
 	console.log(`Backend app listening on port ${port}`);

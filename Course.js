@@ -17,14 +17,19 @@ const CourseSchema = mongoose.Schema({
     type: String, 
     required : true
   },
+  pdf : {
+    type: String, 
+    required : true
+  },
+  video : {
+    type: String, 
+    required : true
+  },
   price : {
     type : Number , 
     required : true 
   },
-  notes : {
-    type : String , 
-    default : ""
-  },
+  
   students : {
     type: Number , 
     default : 0 
