@@ -306,13 +306,27 @@ app.get("/cart", async (req, res) => {
 		// Calculate the total price by summing up course prices
 		const total = cartItems.reduce((acc, item) => acc + item.price, 0);
 
-		res.json(cartItems);
+		
+		res.json(cartItems)
+		
 	} catch (error) {
 		console.error("Error retrieving cart items:", error);
 		res.status(500).json({ error: "Failed to retrieve cart items" });
 	}
 });
 
+// Add this route to fetch the cart item count
+app.get("/cart/count", async (req, res) => {
+	try {
+	  // Retrieve the number of cart items from the database
+	  const cartItemCount = await CartItem.countDocuments();
+	  res.json({ count: cartItemCount });
+	} catch (error) {
+	  console.error("Error retrieving cart item count:", error);
+	  res.status(500).json({ error: "Failed to retrieve cart item count" });
+	}
+  });
+  
 //remove from cart
 app.delete("/cart/remove/:courseTitle", async (req, res) => {
 	const { courseTitle } = req.params;
@@ -353,7 +367,7 @@ app.get("/allcourses", async (req, res) => {
 	}
 });
 
-//add course to cart
+//add course to wishlist
 app.post("/wishlist/add", async (req, res) => {
 	try {
 		const courseTitle = req.body.courseTitle;
@@ -371,30 +385,30 @@ app.post("/wishlist/add", async (req, res) => {
 			image: course.image,
 		});
 
-		// Save the cart item to the database
+		// Save the wishlist item to the database
 		await wishlistItem.save();
 
-		res.json({ message: "Course added to cart", wishlistItem });
+		res.json({ message: "Course added to wishlist", wishlistItem });
 	} catch (error) {
-		console.error("Error adding course to cart:", error);
-		res.status(500).json({ error: "Failed to add course to cart" });
+		console.error("Error adding course to wishlist:", error);
+		res.status(500).json({ error: "Failed to add course to wishlist" });
 	}
 });
 
 app.get("/wishlist", async (req, res) => {
 	try {
-		// Retrieve all cart items from the database
+		// Retrieve all wishlist items from the database
 		const wishlistItems = await WishlistItem.find({});
 		
 
 		res.json(wishlistItems);
 	} catch (error) {
-		console.error("Error retrieving cart items:", error);
-		res.status(500).json({ error: "Failed to retrieve cart items" });
+		console.error("Error retrieving wishlist items:", error);
+		res.status(500).json({ error: "Failed to retrieve wishlist items" });
 	}
 });
 
-//remove from cart
+//remove from wishlist
 app.delete("/wishlist/remove/:courseTitle", async (req, res) => {
 	const { courseTitle } = req.params;
 
@@ -461,6 +475,7 @@ app.post("/checkout", authenticateUser, async (req, res) => {
 
 			await user.save();
 		}
+		await CartItem.deleteMany({});
 		res.json({ message: "Order placed successfully" });
 	} catch (error) {
 		console.error("Error placing order:", error);
