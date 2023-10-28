@@ -214,27 +214,27 @@ function authenticateToken(req, res, next) {
 	}
 }
 
-// Update the /userprofile endpoint to fetch user data, including orders
-app.get("/userprofile", authenticateToken, async (req, res) => {
-	const userId = req.user.id; // Extract the user's ID from the JWT payload
+app.put("/users/updateprofile/:email", async (req, res) => {
+	const {email } = req.params; // Get the course title from the URL parameter
 
-	try {
-		// Fetch the user's profile including orders from the database
-		const user = await User.findById(userId);
+	// Find the course by title and update it
+	const updatedUser= await User.findOneAndUpdate(
+		{ email },
+		{
+			username: req.body.username,
+			email: req.body.email,
+			
+		},
+		{ new: true } // Return the updated course
+	);
 
-		if (!user) {
-			return res.status(404).json({ error: "User not found" });
-		}
-
-		res.json({
-			username: user.username,
-			email: user.email,
-		});
-	} catch (error) {
-		console.error("Error fetching user profile data:", error);
-		return res.status(500).json({ error: "Internal server error" });
+	if (!updatedUser) {
+		return res.status(404).json({ message: "user not found" });
 	}
+	res.status(200).json({ message: "User updated", updatedUser });
+	console.log("User updated")
 });
+
 
 app.get("/orders", authenticateToken, async (req, res) => {
 	const userEmail = req.user.email; // Extract the user's email from the JWT payload
