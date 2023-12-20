@@ -1,6 +1,6 @@
 const express = require("express");
 const app = express();
-const port = 3001;
+const port = 3006;
 const ConnectToMongo = require("./db");
 const User = require("./User");
 const bcrypt = require("bcryptjs");
